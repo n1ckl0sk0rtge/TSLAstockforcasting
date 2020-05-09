@@ -18,12 +18,12 @@ from datetime import datetime, timedelta
 yf.pdr_override()
 register_matplotlib_converters()
 
-auth = tweepy.OAuthHandler('6eE9ljLVoFw0dO7tzE5LvVuAV', 'uWWH069Y0DN3Pl2J7P50bJ5sh63TkpW9t7KaINUwCd2YrqSKBq')
-auth.set_access_token('1076668512-rYvNa96YK7v4ivroXF48kfZPmuOUMH8LfkRrIva', 'iUjkAQ843cyc7zvbRJ56Zwwwv1HFcnfnEpm0NoJIhy4Cs')
+auth = tweepy.OAuthHandler('*******', '*********')
+auth.set_access_token('*********', '**************')
 api = tweepy.API(auth)
 
 tsla = yf.Ticker("TSLA")
-tweets = Cursor(api.user_timeline, id='@Tesla').items()
+tweets = Cursor(api.user_timeline, id='@elonmusk').items()
 
 yesterday = datetime.today() - timedelta(days=1)
 start_date = datetime(2019, 1, 1)
@@ -37,7 +37,7 @@ tweet_dates = list()
 for tweet in tweets:
     if tweet.created_at < start_date:
         break
-    if tweet.created_at < yesterday:
+    if tweet.created_at < yesterday and tweet.text.casefold().find("tesla") > -1::
         tweet_dates.append(np.datetime64(tweet.created_at.date()))
 
 tweeted = list()
@@ -47,9 +47,7 @@ for i in range(0, len(dataframe.index.values)):
     value = 0
     for dates in tweet_dates:
         if stock_date == dates:
-            value = 1
-        else:
-            value = 0
+            value += 1
     tweeted.append(value)
 
 for j in range(0, len(tweeted)):
@@ -59,20 +57,18 @@ for j in range(0, len(tweeted)):
 
 dataframefragment['tweeted'] = tweeted
 
-StockPrices = np.array(dataframefragment.drop(['shift'], 1))
-# what does this do?
-
+StockPrices = np.array(dataframefragment.drop(['Adj Close'], 1))
+StockPrices = StockPrices[:-1]
 StockPrices = preprocessing.scale(StockPrices)
 
 # Adj Close form yesterday
 # Will be used to predict the price of today
 StockPrice_yesterday = StockPrices[-1:]
-StockPrices = StockPrices[:-1]
 
-StockPrices_shifted = np.array(dataframefragment['shift'])
-StockPrices_shifted = StockPrices_shifted[:-1]
+StockPrices_pred = np.array(dataframefragment['Adj Close'])
+StockPrices_pred = StockPrices_shifted[:-1]
 
-X_train, X_test, y_train, y_test = train_test_split(StockPrices, StockPrices_shifted, test_size=0.33)
+X_train, X_test, y_train, y_test = train_test_split(StockPrices, StockPrices_pred, test_size=0.33)
 
 classifier = make_pipeline(PolynomialFeatures(5), Ridge())
 classifier.fit(X_train, y_train)
